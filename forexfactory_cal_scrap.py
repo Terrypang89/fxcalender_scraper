@@ -156,7 +156,7 @@ if __name__ == "__main__":
     tic = time.perf_counter()
     eco = PyEcoCal()
     
-    json = eco.GetEconomicCalendar(datetime.today() + timedelta(days=2))
+    json = eco.GetEconomicCalendar(datetime.today())
     print(json)
 
     toc = time.perf_counter()
