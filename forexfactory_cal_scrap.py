@@ -11,6 +11,7 @@ import threading as th
 import logging
 from time import sleep
 import pandas as pd
+from  dateutil import parser
 
 class RepeatedTimer(object):
     def __init__(self, interval, function, *args, **kwargs):
@@ -43,6 +44,14 @@ class RepeatedTimer(object):
         self.is_running = False
 
 class PyEcoCal:
+
+    def is_date_parsing(self, date_str, time_str):
+        try:
+            return datetime.strptime(f"{date_str} {time_str}", '%Y-%m-%d %I:%M%p')
+            # return bool(parser.parse(date_str))
+        except ValueError:
+            return False
+    
     def GetEconomicCalendar(self, query_date: datetime):
 
         base_url = "https://www.forexfactory.com/"
@@ -106,15 +115,14 @@ class PyEcoCal:
             check_time = item.find_all("td", {"class": "calendar__cell calendar__time"})
             if len(check_time) != 0:
                 time_eastern = check_time[0].text.strip()
-                print(f"check_time[0]={check_time[0]}, date_string = {date_string}, time_eastern={time_eastern}")
-                if time_eastern == "All Day" or time_eastern == "Tentative" or time_eastern == "Day 1" or time_eastern == "Day 2":
-                    dict["Time"] = time_eastern
-                elif time_eastern == "":
+                datetime_eastern = self.is_date_parsing(date_string, time_eastern)
+                if not time_eastern:
                     dict["Time"] = prev_time
-                else:
-                    datetime_eastern = datetime.strptime(f"{date_string} {time_eastern}", '%Y-%m-%d %I:%M%p')
+                elif isinstance(datetime_eastern, datetime):
                     dict["Time"] = datetime_eastern
                     prev_time = dict["Time"]
+                else:
+                    dict["Time"] = time_eastern
 
             check_currency = item.find_all("td", {"class": "calendar__cell calendar__currency"})
             if len(check_currency) != 0:
@@ -178,7 +186,8 @@ class PyEcoCal:
         events_array = []
         for row_dict in eco_day:
             if not row_dict["Time"]:
-                continue 
+                continue
+
             events_array.append(
                 {
                     "date": row_dict["Date"],
@@ -213,7 +222,7 @@ def run_main():
     setLogger()
     eco = PyEcoCal()
     
-    jsons = eco.GetEconomicCalendar(datetime.today())
+    jsons = eco.GetEconomicCalendar(datetime.today() - timedelta(days=2))
     # data.head()
     logging.info(jsons.to_string())
     toc = time.perf_counter()
